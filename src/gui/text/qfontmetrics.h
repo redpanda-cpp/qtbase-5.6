@@ -86,6 +86,10 @@ public:
     int width(const QString &, int len, int flags) const;
 
     int width(QChar) const;
+
+    int horizontalAdvance(const QString &, int len = -1) const;
+    int horizontalAdvance(QChar) const;
+
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
     QT_DEPRECATED int charWidth(const QString &str, int pos) const;
 #endif

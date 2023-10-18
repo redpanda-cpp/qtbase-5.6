@@ -586,6 +586,16 @@ int QFontMetrics::width(QChar ch) const
     return qRound(advance);
 }
 
+int QFontMetrics::horizontalAdvance(const QString &text, int len) const
+{
+    return width(text, len);
+}
+
+int QFontMetrics::horizontalAdvance(QChar ch) const
+{
+    return width(ch);
+}
+
 #if QT_VERSION < QT_VERSION_CHECK(6,0,0)
 /*! \obsolete
 
