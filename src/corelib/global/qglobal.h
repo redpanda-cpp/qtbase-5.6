@@ -67,6 +67,8 @@
 #  define QT_NO_UNSHARABLE_CONTAINERS
 #endif
 
+#define QT_CONFIG(feature) QT_SUPPORTS(feature)
+
 /* These two macros makes it possible to turn the builtin line expander into a
  * string literal. */
 #define QT_STRINGIFY2(x) #x
