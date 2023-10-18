@@ -471,6 +471,27 @@ QCursor::QCursor(Qt::CursorShape shape)
     setShape(shape);
 }
 
+bool operator==(const QCursor &lhs, const QCursor &rhs) Q_DECL_NOTHROW
+{
+    if (lhs.d == rhs.d)
+        return true; // Copy or same shape
+
+    // Check pixmaps or bitmaps cache keys. Notice that having BitmapCursor
+    // shape implies either non-null pixmap or non-null bitmap and mask
+    if (lhs.shape() == Qt::BitmapCursor && rhs.shape() == Qt::BitmapCursor
+            && lhs.hotSpot() == rhs.hotSpot()) {
+        if (!lhs.d->pixmap.isNull())
+            return lhs.d->pixmap.cacheKey() == rhs.d->pixmap.cacheKey();
+
+        if (!rhs.d->pixmap.isNull())
+            return false;
+
+        return lhs.d->bm->cacheKey() == rhs.d->bm->cacheKey()
+                && lhs.d->bmm->cacheKey() == rhs.d->bmm->cacheKey();
+    }
+
+    return false;
+}
 
 /*!
     Returns the cursor shape identifier. The return value is one of
