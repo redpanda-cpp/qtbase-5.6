@@ -3526,6 +3526,48 @@ QString QLocale::toCurrencyString(double value, const QString &symbol) const
     return format.arg(str, sym);
 }
 
+QString QLocale::formattedDataSize(qint64 bytes, int precision, DataSizeFormats format)
+{
+    int power, base = 1000;
+    if (!bytes) {
+        power = 0;
+    } else if (format & DataSizeBase1000) {
+        power = int(std::log10(qAbs(bytes)) / 3);
+    } else { // Compute log2(bytes) / 10:
+        power = int((63 - qCountLeadingZeroBits(quint64(qAbs(bytes)))) / 10);
+        base = 1024;
+    }
+    // Only go to doubles if we'll be using a quantifier:
+    const QString number = power
+        ? toString(bytes / std::pow(double(base), power), 'f', qMin(precision, 3 * power))
+        : toString(bytes);
+
+    // We don't support sizes in units larger than exbibytes because
+    // the number of bytes would not fit into qint64.
+    Q_ASSERT(power <= 6 && power >= 0);
+    // Red Panda C++: use hard-coded unit strings.
+    QString unit;
+    if (power > 0) {
+        if (format & DataSizeSIQuantifiers) {
+            static QString siQuantifiers[] {
+                QStringLiteral("kB"), QStringLiteral("MB"), QStringLiteral("GB"),
+                QStringLiteral("TB"), QStringLiteral("PB"), QStringLiteral("EB")
+            };
+            unit = siQuantifiers[power - 1];
+        } else {
+            static QString iecQuantifiers[] {
+                QStringLiteral("KiB"), QStringLiteral("MiB"), QStringLiteral("GiB"),
+                QStringLiteral("TiB"), QStringLiteral("PiB"), QStringLiteral("EiB")
+            };
+            unit = iecQuantifiers[power - 1];
+        }
+    } else {
+        unit = QStringLiteral("Bytes");
+    }
+
+    return number + QLatin1Char(' ') + unit;
+}
+
 /*!
     \since 4.8
 
