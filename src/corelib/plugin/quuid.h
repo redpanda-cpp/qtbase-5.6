@@ -74,6 +74,12 @@ public:
         Sha1                 = 5 // 0 1 0 1
     };
 
+    enum StringFormat {
+        WithBraces      = 0,
+        WithoutBraces   = 1,
+        Id128           = 3
+    };
+
 #if defined(Q_COMPILER_UNIFORM_INIT) && !defined(Q_QDOC)
     Q_DECL_CONSTEXPR QUuid() Q_DECL_NOTHROW : data1(0), data2(0), data3(0), data4{0,0,0,0,0,0,0,0} {}
 
@@ -108,6 +114,7 @@ public:
     QUuid(const QString &);
     QUuid(const char *);
     QString toString() const;
+    QString toString(StringFormat mode) const;
     QUuid(const QByteArray &);
     QByteArray toByteArray() const;
     QByteArray toRfc4122() const;

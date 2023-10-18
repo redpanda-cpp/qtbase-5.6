@@ -43,6 +43,8 @@
 #endif
 QT_BEGIN_NAMESPACE
 
+enum { MaxStringUuidLength = 38 };
+
 template <class Char, class Integral>
 void _q_toHex(Char *&dst, Integral value)
 {
@@ -89,6 +91,30 @@ void _q_uuidToHex(Char *&dst, const uint &d1, const ushort &d2, const ushort &d3
     for (int i = 2; i < 8; i++)
         _q_toHex(dst, d4[i]);
     *dst = Char('}');
+}
+
+static char *_q_uuidToHex(const QUuid &uuid, char *dst, QUuid::StringFormat mode = QUuid::WithBraces)
+{
+    if ((mode & QUuid::WithoutBraces) == 0)
+        *dst++ = '{';
+    _q_toHex(dst, uuid.data1);
+    if ((mode & QUuid::Id128) != QUuid::Id128)
+        *dst++ = '-';
+    _q_toHex(dst, uuid.data2);
+    if ((mode & QUuid::Id128) != QUuid::Id128)
+        *dst++ = '-';
+    _q_toHex(dst, uuid.data3);
+    if ((mode & QUuid::Id128) != QUuid::Id128)
+        *dst++ = '-';
+    for (int i = 0; i < 2; i++)
+        _q_toHex(dst, uuid.data4[i]);
+    if ((mode & QUuid::Id128) != QUuid::Id128)
+        *dst++ = '-';
+    for (int i = 2; i < 8; i++)
+        _q_toHex(dst, uuid.data4[i]);
+    if ((mode & QUuid::WithoutBraces) == 0)
+        *dst++ = '}';
+    return dst;
 }
 
 template <class Char>
@@ -548,6 +574,13 @@ QString QUuid::toString() const
     _q_uuidToHex(data, data1, data2, data3, data4);
 
     return result;
+}
+
+QString QUuid::toString(QUuid::StringFormat mode) const
+{
+    char latin1[MaxStringUuidLength];
+    const auto end = _q_uuidToHex(*this, latin1, mode);
+    return QString::fromLatin1(latin1, end - latin1);
 }
 
 /*!
