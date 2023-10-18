@@ -184,6 +184,7 @@
 #endif
 
 #if defined(Q_OS_WIN32) || defined(Q_OS_WIN64) || defined(Q_OS_WINCE) || defined(Q_OS_WINRT)
+#  define Q_OS_WINDOWS
 #  define Q_OS_WIN
 #endif
 
