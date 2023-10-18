@@ -798,6 +798,10 @@ private:
 
     Data *d;
 
+    friend inline bool operator==(QChar, const QString &) Q_DECL_NOTHROW;
+    friend inline bool operator< (QChar, const QString &) Q_DECL_NOTHROW;
+    friend inline bool operator> (QChar, const QString &) Q_DECL_NOTHROW;
+
     void reallocData(uint alloc, bool grow = false);
     void expand(int i);
     QString multiArg(int numArgs, const QString **args) const;
@@ -1579,6 +1583,25 @@ inline int QStringRef::compare(const QStringRef &s1, const QStringRef &s2, Qt::C
 { return QString::compare_helper(s1.constData(), s1.length(), s2.constData(), s2.length(), cs); }
 inline int QStringRef::compare(const QStringRef &s1, QLatin1String s2, Qt::CaseSensitivity cs)
 { return QString::compare_helper(s1.constData(), s1.length(), s2, cs); }
+
+// QChar <> QString
+inline bool operator==(QChar lhs, const QString &rhs) Q_DECL_NOTHROW
+{ return rhs.size() == 1 && lhs == rhs.front(); }
+inline bool operator< (QChar lhs, const QString &rhs) Q_DECL_NOTHROW
+{ return QString::compare_helper(&lhs, 1, rhs.data(), rhs.size()) <  0; }
+inline bool operator> (QChar lhs, const QString &rhs) Q_DECL_NOTHROW
+{ return QString::compare_helper(&lhs, 1, rhs.data(), rhs.size()) >  0; }
+
+inline bool operator!=(QChar lhs, const QString &rhs) Q_DECL_NOTHROW { return !(lhs == rhs); }
+inline bool operator<=(QChar lhs, const QString &rhs) Q_DECL_NOTHROW { return !(lhs >  rhs); }
+inline bool operator>=(QChar lhs, const QString &rhs) Q_DECL_NOTHROW { return !(lhs <  rhs); }
+
+inline bool operator==(const QString &lhs, QChar rhs) Q_DECL_NOTHROW { return   rhs == lhs; }
+inline bool operator!=(const QString &lhs, QChar rhs) Q_DECL_NOTHROW { return !(rhs == lhs); }
+inline bool operator< (const QString &lhs, QChar rhs) Q_DECL_NOTHROW { return   rhs >  lhs; }
+inline bool operator> (const QString &lhs, QChar rhs) Q_DECL_NOTHROW { return   rhs <  lhs; }
+inline bool operator<=(const QString &lhs, QChar rhs) Q_DECL_NOTHROW { return !(rhs <  lhs); }
+inline bool operator>=(const QString &lhs, QChar rhs) Q_DECL_NOTHROW { return !(rhs >  lhs); }
 
 inline int QString::localeAwareCompare(const QStringRef &s) const
 { return localeAwareCompare_helper(constData(), length(), s.constData(), s.length()); }
