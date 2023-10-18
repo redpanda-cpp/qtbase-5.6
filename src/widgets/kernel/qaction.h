@@ -84,9 +84,9 @@ public:
                     NormalPriority = 128,
                     HighPriority = 256};
     Q_ENUM(Priority)
-    explicit QAction(QObject* parent);
-    QAction(const QString &text, QObject* parent);
-    QAction(const QIcon &icon, const QString &text, QObject* parent);
+    explicit QAction(QObject* parent = nullptr);
+    QAction(const QString &text, QObject* parent = nullptr);
+    QAction(const QIcon &icon, const QString &text, QObject* parent = nullptr);
 
     ~QAction();
 
