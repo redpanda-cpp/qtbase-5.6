@@ -258,6 +258,11 @@ public:
     const QChar operator[](uint i) const;
     QCharRef operator[](uint i);
 
+    Q_REQUIRED_RESULT inline QChar front() const { return at(0); }
+    Q_REQUIRED_RESULT inline QCharRef front();
+    Q_REQUIRED_RESULT inline QChar back() const { return at(size() - 1); }
+    Q_REQUIRED_RESULT inline QCharRef back();
+
     QString arg(qlonglong a, int fieldwidth=0, int base=10,
                 QChar fillChar = QLatin1Char(' ')) const Q_REQUIRED_RESULT;
     QString arg(qulonglong a, int fieldwidth=0, int base=10,
@@ -1094,6 +1099,8 @@ inline QCharRef QString::operator[](int i)
 { Q_ASSERT(i >= 0); return QCharRef(*this, i); }
 inline QCharRef QString::operator[](uint i)
 { return QCharRef(*this, i); }
+inline QCharRef QString::front() { return operator[](0); }
+inline QCharRef QString::back() { return operator[](size() - 1); }
 inline QString::iterator QString::begin()
 { detach(); return reinterpret_cast<QChar*>(d->data()); }
 inline QString::const_iterator QString::begin() const
