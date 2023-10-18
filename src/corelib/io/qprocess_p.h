@@ -326,6 +326,7 @@ public:
     QStringList arguments;
 #if defined(Q_OS_WIN)
     QString nativeArguments;
+    QProcess::CreateProcessArgumentModifier modifyCreateProcessArgs;
 #endif
     QProcessEnvironment environment;
 
@@ -355,6 +356,7 @@ public:
     bool waitForDeadChild();
 #endif
 #ifdef Q_OS_WIN
+    bool callCreateProcess(QProcess::CreateProcessArguments *cpargs);
     bool drainOutputPipes();
     void flushPipeWriter();
     qint64 pipeWriterBytesToWrite() const;

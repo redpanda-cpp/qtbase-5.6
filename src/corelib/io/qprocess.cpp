@@ -1535,6 +1535,18 @@ void QProcess::setNativeArguments(const QString &arguments)
     d->nativeArguments = arguments;
 }
 
+QProcess::CreateProcessArgumentModifier QProcess::createProcessArgumentsModifier() const
+{
+    Q_D(const QProcess);
+    return d->modifyCreateProcessArgs;
+}
+
+void QProcess::setCreateProcessArgumentsModifier(CreateProcessArgumentModifier modifier)
+{
+    Q_D(QProcess);
+    d->modifyCreateProcessArgs = modifier;
+}
+
 #endif
 
 /*!

@@ -330,7 +330,8 @@ void QProcessPrivate::closeChannel(Channel *channel)
     destroyPipe(channel->pipe);
 }
 
-static QString qt_create_commandline(const QString &program, const QStringList &arguments)
+static QString qt_create_commandline(const QString &program, const QStringList &arguments,
+                                     const QString &nativeArguments = QString())
 {
     QString args;
     if (!program.isEmpty()) {
@@ -359,6 +360,13 @@ static QString qt_create_commandline(const QString &program, const QStringList &
         }
         args += QLatin1Char(' ') + tmp;
     }
+
+    if (!nativeArguments.isEmpty()) {
+        if (!args.isEmpty())
+             args += QLatin1Char(' ');
+        args += nativeArguments;
+    }
+
     return args;
 }
 
@@ -444,6 +452,30 @@ static QByteArray qt_create_environment(const QProcessEnvironmentPrivate::Hash &
     return envlist;
 }
 
+bool QProcessPrivate::callCreateProcess(QProcess::CreateProcessArguments *cpargs)
+{
+    if (modifyCreateProcessArgs)
+        modifyCreateProcessArgs(cpargs);
+    bool success = CreateProcess(cpargs->applicationName, cpargs->arguments,
+                                 cpargs->processAttributes, cpargs->threadAttributes,
+                                 cpargs->inheritHandles, cpargs->flags, cpargs->environment,
+                                 cpargs->currentDirectory, cpargs->startupInfo,
+                                 cpargs->processInformation);
+    if (stdinChannel.pipe[0] != INVALID_Q_PIPE) {
+        CloseHandle(stdinChannel.pipe[0]);
+        stdinChannel.pipe[0] = INVALID_Q_PIPE;
+    }
+    if (stdoutChannel.pipe[1] != INVALID_Q_PIPE) {
+        CloseHandle(stdoutChannel.pipe[1]);
+        stdoutChannel.pipe[1] = INVALID_Q_PIPE;
+    }
+    if (stderrChannel.pipe[1] != INVALID_Q_PIPE) {
+        CloseHandle(stderrChannel.pipe[1]);
+        stderrChannel.pipe[1] = INVALID_Q_PIPE;
+    }
+    return success;
+}
+
 void QProcessPrivate::startProcess()
 {
     Q_Q(QProcess);
@@ -498,11 +530,22 @@ void QProcessPrivate::startProcess()
                                  0, 0, 0,
                                  stdinChannel.pipe[0], stdoutChannel.pipe[1], stderrChannel.pipe[1]
     };
-    success = CreateProcess(0, (wchar_t*)args.utf16(),
+
+    const QString nativeWorkingDirectory = QDir::toNativeSeparators(workingDirectory);
+    QProcess::CreateProcessArguments cpargs = {
+        0, (wchar_t*)args.utf16(),
                             0, 0, TRUE, dwCreationFlags,
                             environment.isEmpty() ? 0 : envlist.data(),
-                            workingDirectory.isEmpty() ? 0 : (wchar_t*)QDir::toNativeSeparators(workingDirectory).utf16(),
-                            &startupInfo, pid);
+        nativeWorkingDirectory.isEmpty() ? Q_NULLPTR : (wchar_t*)nativeWorkingDirectory.utf16(),
+        &startupInfo, pid
+    };
+    if (modifyCreateProcessArgs)
+        modifyCreateProcessArgs(&cpargs);
+    success = CreateProcess(cpargs.applicationName, cpargs.arguments, cpargs.processAttributes,
+                            cpargs.threadAttributes, cpargs.inheritHandles, cpargs.flags,
+                            cpargs.environment, cpargs.currentDirectory, cpargs.startupInfo,
+                            cpargs.processInformation);
+
     QString errorString;
     if (!success) {
         // Capture the error string before we do CloseHandle below
@@ -818,6 +861,7 @@ bool QProcessPrivate::waitForWrite(int msecs)
 // Use ShellExecuteEx() to trigger an UAC prompt when CreateProcess()fails
 // with ERROR_ELEVATION_REQUIRED.
 static bool startDetachedUacPrompt(const QString &programIn, const QStringList &arguments,
+                                   const QString &nativeArguments,
                                    const QString &workingDir, qint64 *pid)
 {
     typedef BOOL (WINAPI *ShellExecuteExType)(SHELLEXECUTEINFOW *);
@@ -828,11 +872,13 @@ static bool startDetachedUacPrompt(const QString &programIn, const QStringList &
     if (!shellExecuteEx)
         return false;
 
-    const QString args = qt_create_commandline(QString(), arguments); // needs arguments only
+    const QString args = qt_create_commandline(QString(),                   // needs arguments only
+                                               arguments, nativeArguments);
     SHELLEXECUTEINFOW shellExecuteExInfo;
     memset(&shellExecuteExInfo, 0, sizeof(SHELLEXECUTEINFOW));
     shellExecuteExInfo.cbSize = sizeof(SHELLEXECUTEINFOW);
-    shellExecuteExInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_UNICODE | SEE_MASK_FLAG_NO_UI;
+    shellExecuteExInfo.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_UNICODE | SEE_MASK_FLAG_NO_UI | SEE_MASK_CLASSNAME;
+    shellExecuteExInfo.lpClass = L"exefile";
     shellExecuteExInfo.lpVerb = L"runas";
     const QString program = QDir::toNativeSeparators(programIn);
     shellExecuteExInfo.lpFile = reinterpret_cast<LPCWSTR>(program.utf16());
@@ -848,6 +894,12 @@ static bool startDetachedUacPrompt(const QString &programIn, const QStringList &
         *pid = qint64(GetProcessId(shellExecuteExInfo.hProcess));
     CloseHandle(shellExecuteExInfo.hProcess);
     return true;
+}
+
+static bool startDetachedUacPrompt(const QString &programIn, const QStringList &arguments,
+                                   const QString &workingDir, qint64 *pid)
+{
+    return startDetachedUacPrompt(programIn, arguments, QString(), workingDir, pid);
 }
 
 bool QProcessPrivate::startDetached(const QString &program, const QStringList &arguments, const QString &workingDir, qint64 *pid)
