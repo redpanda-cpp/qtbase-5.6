@@ -10339,6 +10339,15 @@ void QWidget::setWindowFlags(Qt::WindowFlags flags)
     d->setWindowFlags(flags);
 }
 
+void QWidget::setWindowFlag(Qt::WindowType flag, bool on)
+{
+    Q_D(QWidget);
+    if (on)
+        d->setWindowFlags(data->window_flags | flag);
+    else
+        d->setWindowFlags(data->window_flags & ~flag);
+}
+
 /*! \internal
 
     Implemented in QWidgetPrivate so that QMdiSubWindowPrivate can reimplement it.
