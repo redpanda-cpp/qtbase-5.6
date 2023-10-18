@@ -1812,6 +1812,13 @@ bool QDir::exists(const QString &name) const
     return QFile::exists(filePath(name));
 }
 
+bool QDir::isEmpty(Filters filters) const
+{
+    const auto d = d_ptr.constData();
+    QDirIterator it(d->dirEntry.filePath(), d->nameFilters, filters);
+    return !it.hasNext();
+}
+
 /*!
     Returns a list of the root directories on this system.
 
