@@ -2136,6 +2136,20 @@ void QProcess::start(OpenMode mode)
     d->start(mode);
 }
 
+bool QProcess::startDetached(qint64 *pid)
+{
+    Q_D(QProcess);
+    if (d->processState != NotRunning) {
+        qWarning("QProcess::startDetached: Process is already running");
+        return false;
+    }
+    if (d->program.isEmpty()) {
+        d->setErrorAndEmit(QProcess::FailedToStart, tr("No program defined"));
+        return false;
+    }
+    return d->startDetached(pid);
+}
+
 /*!
     Starts the program set by setProgram() with arguments set by setArguments().
     The OpenMode is set to \a mode.
