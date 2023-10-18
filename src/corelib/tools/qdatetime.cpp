@@ -4135,6 +4135,17 @@ qint64 QDateTime::currentMSecsSinceEpoch() Q_DECL_NOTHROW
                    - julianDayFromDate(1970, 1, 1)) * Q_INT64_C(86400000);
 }
 
+qint64 QDateTime::currentSecsSinceEpoch() Q_DECL_NOTHROW
+{
+    SYSTEMTIME st;
+    memset(&st, 0, sizeof(SYSTEMTIME));
+    GetSystemTime(&st);
+
+    return st.wHour * SECS_PER_HOUR + st.wMinute * SECS_PER_MIN + st.wSecond +
+            qint64(julianDayFromDate(st.wYear, st.wMonth, st.wDay)
+                   - julianDayFromDate(1970, 1, 1)) * Q_INT64_C(86400);
+}
+
 #elif defined(Q_OS_UNIX)
 QDate QDate::currentDate()
 {

@@ -312,6 +312,7 @@ public:
     static QDateTime fromMSecsSinceEpoch(qint64 msecs, const QTimeZone &timeZone);
 #endif
     static qint64 currentMSecsSinceEpoch() Q_DECL_NOTHROW;
+    static qint64 currentSecsSinceEpoch() Q_DECL_NOTHROW;
 
 #if defined(Q_OS_MAC) || defined(Q_QDOC)
     static QDateTime fromCFDate(CFDateRef date);
