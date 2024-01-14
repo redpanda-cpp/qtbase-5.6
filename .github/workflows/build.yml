@@ -1,0 +1,80 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: Build
+    strategy:
+      matrix:
+        arch: [32, 64]
+    runs-on: windows-2019
+    defaults:
+      run:
+        shell: bash
+    env:
+      _MINGW_TOOLCHAIN: /c/Qt/Tools/mingw810_${{ matrix.arch }}
+      _QT_INSTALL_PREFIX: /c/Qt/5.6.4/mingw81_${{ matrix.arch }}-redpanda
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup toolchain
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '5.15.2'
+          host: windows
+          target: desktop
+          arch: win${{ matrix.arch }}_mingw81
+          archives: qtbase
+          tools: tools_mingw,qt.tools.win${{ matrix.arch }}_mingw810
+          dir: C:/
+
+      - name: Prepare source
+        run: |
+          git clone https://github.com/qt/qtsvg.git --branch=5.6 --depth=1
+          git clone https://github.com/qt/qttools.git --branch=5.6 --depth=1
+
+      - name: Build
+        run: |
+          export PATH="$_QT_INSTALL_PREFIX/bin:$_MINGW_TOOLCHAIN/bin:$PATH"
+
+          ./configure.bat \
+            -prefix $_QT_INSTALL_PREFIX -release \
+            -opensource -confirm-license \
+            -no-use-gold-linker -static -static-runtime -platform win32-g++ -target xp \
+            -opengl desktop -no-angle -iconv -gnu-iconv -no-icu -qt-zlib -qt-pcre -qt-libpng -qt-libjpeg -qt-freetype -no-fontconfig -qt-harfbuzz -no-ssl -no-openssl \
+            -nomake examples -nomake tests -nomake tools
+          mingw32-make -j$(nproc)
+          mingw32-make install
+
+          pushd qtsvg
+          {
+            qmake .
+            mingw32-make -j$(nproc)
+            mingw32-make install
+          }
+          popd
+
+          pushd qttools
+          {
+            qmake .
+            mingw32-make -j$(nproc)
+            mingw32-make install
+          }
+          popd
+
+          7z a -t7z -mx=9 -ms=on -mqs=on -mf=BCJ2 -m0=LZMA2:d=64m:fb=273:c=256m qt5.6.4-mingw81_${{ matrix.arch }}-redpanda.7z /c/Qt/5.6.4
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: Qt 5.6.4 - mingw81_${{ matrix.arch }}-redpanda
+          path: qt5.6.4-mingw81_${{ matrix.arch }}-redpanda.7z
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            qt5.6.4-mingw81_${{ matrix.arch }}-redpanda.7z
