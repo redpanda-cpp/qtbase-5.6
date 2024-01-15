@@ -59,6 +59,38 @@
 
 QT_BEGIN_NAMESPACE
 
+namespace QtPrivate {
+template <typename Iterator>
+using IfIsInputIterator = typename std::enable_if<
+    std::is_convertible<typename std::iterator_traits<Iterator>::iterator_category, std::input_iterator_tag>::value,
+    bool>::type;
+
+template <typename Iterator>
+using IfIsForwardIterator = typename std::enable_if<
+    std::is_convertible<typename std::iterator_traits<Iterator>::iterator_category, std::forward_iterator_tag>::value,
+    bool>::type;
+
+template <typename Iterator>
+using IfIsNotForwardIterator = typename std::enable_if<
+    !std::is_convertible<typename std::iterator_traits<Iterator>::iterator_category, std::forward_iterator_tag>::value,
+    bool>::type;
+
+template <typename Container,
+          typename InputIterator,
+          IfIsNotForwardIterator<InputIterator> = true>
+void reserveIfForwardIterator(Container *, InputIterator, InputIterator)
+{
+}
+
+template <typename Container,
+          typename ForwardIterator,
+          IfIsForwardIterator<ForwardIterator> = true>
+void reserveIfForwardIterator(Container *c, ForwardIterator f, ForwardIterator l)
+{
+    c->reserve(static_cast<typename Container::size_type>(std::distance(f, l)));
+}
+
+} // namespace QtPrivate
 
 template <typename T> class QVector;
 template <typename T> class QSet;
@@ -154,6 +186,8 @@ public:
         : d(const_cast<QListData::Data *>(&QListData::shared_null))
     { reserve(int(args.size())); std::copy(args.begin(), args.end(), std::back_inserter(*this)); }
 #endif
+    template <typename InputIterator, QtPrivate::IfIsInputIterator<InputIterator> = true>
+    QList(InputIterator first, InputIterator last);
     bool operator==(const QList<T> &l) const;
     inline bool operator!=(const QList<T> &l) const { return !(*this == l); }
 
@@ -412,6 +446,13 @@ private:
     inline int count_impl(const T &, QListData::NotArrayCompatibleLayout) const;
     inline int count_impl(const T &, QListData::ArrayCompatibleLayout) const;
 };
+
+#if defined(__cpp_deduction_guides) && __cpp_deduction_guides >= 201606
+template <typename InputIterator,
+          typename ValueType = typename std::iterator_traits<InputIterator>::value_type,
+          QtPrivate::IfIsInputIterator<InputIterator> = true>
+QList(InputIterator, InputIterator) -> QList<ValueType>;
+#endif
 
 #if defined(Q_CC_BOR)
 template <typename T>
@@ -815,6 +856,15 @@ Q_OUTOFLINE_TEMPLATE QList<T>::~QList()
 {
     if (!d->ref.deref())
         dealloc(d);
+}
+
+template <typename T>
+template <typename InputIterator, QtPrivate::IfIsInputIterator<InputIterator>>
+QList<T>::QList(InputIterator first, InputIterator last)
+    : QList()
+{
+    QtPrivate::reserveIfForwardIterator(this, first, last);
+    std::copy(first, last, std::back_inserter(*this));
 }
 
 template <typename T>
