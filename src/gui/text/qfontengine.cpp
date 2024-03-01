@@ -1836,8 +1836,14 @@ QFontEngine *QFontEngineMulti::loadEngine(int at)
     QFontDef request(fontDef);
     request.styleStrategy |= QFont::NoFontMerging;
     request.family = fallbackFamilyAt(at - 1);
+    request.families = QStringList(request.family);
 
-    if (QFontEngine *engine = QFontDatabase::findFont(request, m_script)) {
+    // At this point, the main script of the text has already been considered
+    // when fetching the list of fallback families from the database, and the
+    // info about the actual script of the characters may have been discarded,
+    // so we do not check for writing system support, but instead just load
+    // the family indiscriminately.
+    if (QFontEngine *engine = QFontDatabase::findFont(request, QChar::Script_Common)) {
         engine->fontDef.weight = request.weight;
         if (request.style > QFont::StyleNormal)
             engine->fontDef.style = request.style;

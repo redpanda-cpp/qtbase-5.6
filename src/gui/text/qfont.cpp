@@ -110,7 +110,17 @@ bool QFontDef::exactMatch(const QFontDef &other) const
     if (stretch != 0 && other.stretch != 0 && stretch != other.stretch)
         return false;
 
+    if (families.size() != other.families.size())
+        return false;
+
     QString this_family, this_foundry, other_family, other_foundry;
+    for (int i = 0; i < families.size(); ++i) {
+        QFontDatabase::parseFontName(families.at(i), this_foundry, this_family);
+        QFontDatabase::parseFontName(other.families.at(i), other_foundry, other_family);
+        if (this_family != other_family || this_foundry != other_foundry)
+            return false;
+    }
+
     QFontDatabase::parseFontName(family, this_foundry, this_family);
     QFontDatabase::parseFontName(other.family, other_foundry, other_family);
 
@@ -257,6 +267,9 @@ void QFontPrivate::resolve(uint mask, const QFontPrivate *other)
     // assign the unset-bits with the set-bits of the other font def
     if (! (mask & QFont::FamilyResolved))
         request.family = other->request.family;
+
+    if (!(mask & QFont::FamiliesResolved))
+        request.families = other->request.families;
 
     if (! (mask & QFont::StyleNameResolved))
         request.styleName = other->request.styleName;
@@ -1658,6 +1671,7 @@ bool QFont::operator<(const QFont &f) const
     if (r1.stretch != r2.stretch) return r1.stretch < r2.stretch;
     if (r1.styleHint != r2.styleHint) return r1.styleHint < r2.styleHint;
     if (r1.styleStrategy != r2.styleStrategy) return r1.styleStrategy < r2.styleStrategy;
+    if (r1.families != r2.families) return r1.families < r2.families;
     if (r1.family != r2.family) return r1.family < r2.family;
     if (f.d->capital != d->capital) return f.d->capital < d->capital;
 
@@ -2160,6 +2174,20 @@ QString QFont::lastResortFont() const
     return QString();
 }
 
+QStringList QFont::families() const
+{
+    return d->request.families;
+}
+
+void QFont::setFamilies(const QStringList &families)
+{
+    if ((resolve_mask & QFont::FamiliesResolved) && d->request.families == families)
+        return;
+    detach();
+    d->request.families = families;
+    resolve_mask |= QFont::FamiliesResolved;
+}
+
 /*****************************************************************************
   QFont stream functions
  *****************************************************************************/
@@ -2224,6 +2252,8 @@ QDataStream &operator<<(QDataStream &s, const QFont &font)
         s << (quint8)font.d->request.hintingPreference;
     if (s.version() >= QDataStream::Qt_5_6)
         s << (quint8)font.d->capital;
+    if (s.version() >= QDataStream::Qt_5_6)
+        s << font.d->request.families;
     return s;
 }
 
@@ -2318,6 +2348,11 @@ QDataStream &operator>>(QDataStream &s, QFont &font)
         quint8 value;
         s >> value;
         font.d->capital = QFont::Capitalization(value);
+    }
+    if (s.version() >= QDataStream::Qt_5_6) {
+        QStringList value;
+        s >> value;
+        font.d->request.families = value;
     }
     return s;
 }
